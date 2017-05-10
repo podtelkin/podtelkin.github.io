@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1">
+    <title>Returning page</title>
+</head>
+<body>
+<p>Не 404, но обождите, сейчас редиректнем..</p>
+<br>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.opener) {
+            console.log('Return page closed.');
+//            window.close();
+        }
+        window.parent.postMessage({event: 'returned'}, '*');
+    });
+
+    window.addEventListener('message', function (e) {
+        console.log('-> Return page got a message', e.data);
+    })
+</script>
+
+</body>
+</html>
