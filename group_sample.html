@@ -42,7 +42,7 @@
     TOPIC_USER = ATTACHMENT; 
 
     TOPIC_GROUP = {
-        'attachment' : ATTACHMENT_LINK,
+        'attachment' : ATTACHMENT,
         'groupId' : config.groupId
     };
 
@@ -52,7 +52,7 @@
             {
                 'type' : 'GROUP_THEME',
                 'gid' : config.groupId,
-                'attachment' : ATTACHMENT 
+                'attachment' : JSON.stringify(ATTACHMENT)
             }, 
             function (status, data, error) { 
                 console.log('mediatopic.post result(status=' + status + ', data=' + data + ', error=' + error);
