@@ -1,0 +1,115 @@
+<html>
+<head>
+    <script src="js/oksdk.js"></script>
+    <script src="//api.ok.ru/js/fapi5.js"></script>
+</head>
+<body>
+<script>
+    var config = {
+        app_id: 809984,
+        groupId: 984349017571418, 
+        app_key: 'CBANFNABABABABABA',
+        widget_server: 'http://vdevlnx21.mail.msk/',
+        api_server: 'http://sdevp29.mail.msk:8090/'
+    };
+
+    RETURN_URL = 'http://vdevlnx57.mail.msk:7788/return.html';
+
+
+    OKSDK.init(config, function () {
+        console.log('OKSDK.init success');
+    }, function (error) {
+        console.log('OKSDK.init error: ' + error);
+    });
+
+    ATTACHMENT = {
+        'media' : [
+            {'type': 'text', 'text': 'hello world!'}
+        ]
+    };
+
+    ATTACHMENT_LINK = {
+        'media' : [
+            {'type': 'text', 'text': 'hello world!'},
+            {'type': 'link', 
+             'url': 'http://vdevlnx21.mail.msk/pobeda/app/809984?AAAAAAAAAAAAAAAA=BBBBBBBBBBB', 
+             'imageUrl' : 'https://otvet.imgsmail.ru/download/u_fdde0ef6064d019d20ed57c420180d78_800.jpg',
+             'buttonKey' : 'LISTEN'
+            }
+        ]
+    };
+
+    TOPIC_USER = ATTACHMENT; 
+
+    TOPIC_GROUP = {
+        'attachment' : ATTACHMENT_LINK,
+        'groupId' : config.groupId
+    };
+
+    click_post = function() {
+        OKSDK.REST.call(
+            'mediatopic.post',  
+            {
+                'type' : 'GROUP_THEME',
+                'gid' : '984349017571418',
+                'attachment' : ATTACHMENT 
+            }, 
+            function (status, data, error) { 
+                console.log('mediatopic.post result(status=' + status + ', data=' + data + ', error=' + error);
+                if (error) {
+                    console.log(error.error_code + ', msg: ' + error.error_msg);
+                } 
+        });
+    };
+
+
+    var rParams = FAPI.Util.getRequestParameters();
+    FAPI.init(rParams["api_server"], rParams["apiconnection"],
+          function() {
+              console.log("FAPI.init OK");
+          },
+          function(error) {
+              console.log("FAPI.init error");
+          }
+    );
+
+    FAPI.UI.setWindowSize(500, 720);
+
+    API_callback = function(method, result, data) {
+        var el = document.getElementById('pageinfo');
+        el.innerHTML += 'METHOD: ' + method + '<br>';
+        el.innerHTML += 'RESULT: ' + result + '<br>';
+        el.innerHTML += 'DATA  : ' + data + '<br>'; 
+    };
+
+
+</script>
+<br>
+<input type="button" value="OKSDK.post user new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER);">
+<br><br>
+<input type="button" value="OKSDK.post user old" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER, true);">
+<br><br>
+<input type="button" value="OKSDK.post group new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_GROUP);">
+<br><br>
+<input type="button" value="OKSDK.post group old" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_GROUP, true);">
+<br><br>                                 
+<input type="button" value="OKSDK.REST.call" onclick="click_post();">
+
+<br><br>
+<input type="button" value="ask GROUP_BOT_API_TOKEN" onclick="OKSDK.Widgets.askGroupAppPermissions('GROUP_BOT_API_TOKEN', RETURN_URL);">
+<br><br>
+<input type="button" value="ask MESSAGES_FROM_GROUP" onclick="OKSDK.Widgets.askGroupAppPermissions('MESSAGES_FROM_GROUP', RETURN_URL);">
+<br><br>
+
+
+<div id="pageinfo" style="background: #AAA;">
+<br>
+PAGE INFO:<br>
+</div>
+<br><br>
+<input type="button" value="GET PAGEINFO" onclick="FAPI.UI.getPageInfo();">
+<br><br>
+
+
+</body>
+</html>
