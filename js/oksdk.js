@@ -365,7 +365,7 @@ var OKSDK = (function () {
                 options,
                 {
                     scope: (getClass(scope) == '[object Array]' ? scope.join(';') : scope),
-                    return: returnUrl
+                    redirect_uri: returnUrl
                 },
                 false
             )
