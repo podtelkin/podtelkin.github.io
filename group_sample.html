@@ -40,6 +40,7 @@
     };
 
     TOPIC_USER = ATTACHMENT; 
+    TOPIC_USER_LINK = ATTACHMENT_LINK; 
 
     TOPIC_GROUP = {
         'attachment' : ATTACHMENT_LINK,
@@ -88,6 +89,10 @@
 <input type="button" value="OKSDK.post user new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER);">
 <br><br>
 <input type="button" value="OKSDK.post user old" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER, true);">
+<br><br>
+<input type="button" value="OKSDK.post user new LINK" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER_LINK);">
+<br><br>
+<input type="button" value="OKSDK.post user old LINK" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER_LINK, true);">
 <br><br>
 <input type="button" value="OKSDK.post group new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_GROUP);">
 <br><br>
