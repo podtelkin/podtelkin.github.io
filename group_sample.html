@@ -4,8 +4,12 @@
     <script src="//api.ok.ru/js/fapi5.js"></script>
 </head>
 <body>
-<!--
+
 <script>
+    var h = document.getElementById('hello');
+    if (h) {
+        h.innerHTML = '[OK] - LOADED';
+    }
     
     var config = {
         app_id: 1250488320,
@@ -89,7 +93,7 @@
 
 
 </script>
--->
+
 <br>
 <input type="button" value="OKSDK.post user new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER);">
 <br><br>
@@ -125,13 +129,6 @@ PAGE INFO:<br>
 <div id="hello" style="background: #AFA;">
 HELLO
 </div>
-
-<script>
-    var h = document.getElementById('hello');
-    if (!h) {
-        h.innerHTML = 'LOADED';
-    }
-</script>
 
 </body>
 </html>
