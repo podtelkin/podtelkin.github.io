@@ -66,7 +66,7 @@
 
     PARAMS = OKSDK.Util.getRequestParameters();
 
-    LOG.innerHTML += 'custom_args: ' + PARAMS['custom_args'] + '<br>';
+    console.log('custom_args: ' + PARAMS['custom_args']);
 
     FAPI.init(rParams["api_server"], rParams["apiconnection"],
           function() {
