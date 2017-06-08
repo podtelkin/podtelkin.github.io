@@ -38,12 +38,16 @@ PAGE INFO:<br>
 <br><br>
 
 <div id="hello" style="background: #AFA;">
-Loading...
+<b>PROGRAM LOG:</b><br><br>
 </div>
 
 <script>
-    var h = document.getElementById('hello');
-    if (h) h.innerHTML = '[STAGE 1] - LOADING';
+    print = function(msg) {
+       var h = document.getElementById('hello');
+       if (h) h.innerHTML += msg + '<br>';
+    }
+
+    print('[STAGE 1] - START');
 
     var config = {
         app_id: 1250488320,
@@ -55,16 +59,16 @@ Loading...
 
     RETURN_URL = 'https://podtelkin.github.io/return.html';
 
-    if (h) h.innerHTML = '[STAGE 2] - INITING';
+    print('[STAGE 2] - INITING');
+    if (!OKDSK) print('ERROR: no oksdk');
 
     OKSDK.init(config, function () {
-        console.log('OKSDK.init success');
+        print('OKSDK.init success');
     }, function (error) {
-        console.log('OKSDK.init error: ' + error);
-        alert('error: ' + error);
+        print('OKSDK.init error: ' + error);
     });
 
-    if (h) h.innerHTML = '[STAGE 3] - INITED';
+    print('[STAGE 3] - INITED');
 
     ATTACHMENT = {
         'media' : [
@@ -107,31 +111,30 @@ Loading...
         });
     };
 
-    if (h) h.innerHTML = '[STAGE 4] - INIT FAPI';
+    print('[STAGE 4] - INIT FAPI');
 
     printParams = function() {
         var params = OKSDK.Util.getRequestParameters();
         var pageinfo = document.getElementById('pageinfo');
-        pageinfo.innerHTML += 'custom_args: ' + params['custom_args'] + '<br>';
+        print('custom_args: ' + params['custom_args']);
     };
 
     API_callback = function(method, result, data) {
-        var pageinfo = document.getElementById('pageinfo');
-        pageinfo.innerHTML += 'METHOD: ' + method + '<br>';
-        pageinfo.innerHTML += 'RESULT: ' + result + '<br>';
-        pageinfo.innerHTML += 'DATA  : ' + data + '<br>'; 
+        print('METHOD: ' + method);
+        print('RESULT: ' + result);
+        print('DATA  : ' + data); 
     };
 
     FAPI.init(rParams["api_server"], rParams["apiconnection"],
           function() {
-              console.log("FAPI.init OK");
+              print("FAPI.init OK");
           },
           function(error) {
-              console.log("FAPI.init error");
+              print("FAPI.init error");
           }
     );
 
-    if (h) h.innerHTML = '[OK] - DONE';
+    print('[OK] - DONE');
 
 </script>
 
