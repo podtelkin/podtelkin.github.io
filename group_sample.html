@@ -5,12 +5,46 @@
 </head>
 <body>
 
+<br>
+<input type="button" value="OKSDK.post user new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER);">
+<br><br>
+<input type="button" value="OKSDK.post user old" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER, true);">
+<br><br>
+<input type="button" value="OKSDK.post user new LINK" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER_LINK);">
+<br><br>
+<input type="button" value="OKSDK.post user old LINK" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER_LINK, true);">
+<br><br>
+<input type="button" value="OKSDK.post group new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_GROUP);">
+<br><br>
+<input type="button" value="OKSDK.post group old" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_GROUP, true);">
+<br><br>                                 
+<input type="button" value="OKSDK.REST.call" onclick="click_post();">
+
+<br><br>
+<input type="button" value="ask GROUP_BOT_API_TOKEN" onclick="OKSDK.Widgets.askGroupAppPermissions('GROUP_BOT_API_TOKEN', RETURN_URL);">
+<br><br>
+<input type="button" value="ask MESSAGES_FROM_GROUP" onclick="OKSDK.Widgets.askGroupAppPermissions('MESSAGES_FROM_GROUP', RETURN_URL);">
+<br><br>
+
+
+<div id="pageinfo" style="background: #AAA;">
+<br>
+PAGE INFO:<br>
+</div>
+<br><br>
+<input type="button" value="GET PAGEINFO" onclick="FAPI.UI.getPageInfo();">
+<br><br>
+<input type="button" value="PRINT PARAMS" onclick="printParams();">
+<br><br>
+
+<div id="hello" style="background: #AFA;">
+Loading...
+</div>
+
 <script>
     var h = document.getElementById('hello');
-    if (h) {
-        h.innerHTML = '[OK] - LOADED';
-    }
-    
+    if (h) h.innerHTML = '[STAGE 1] - LOADING';
+
     var config = {
         app_id: 1250488320,
         groupId: 53615552233562, 
@@ -21,12 +55,16 @@
 
     RETURN_URL = 'https://podtelkin.github.io/return.html';
 
+    if (h) h.innerHTML = '[STAGE 2] - INITING';
+
     OKSDK.init(config, function () {
         console.log('OKSDK.init success');
     }, function (error) {
         console.log('OKSDK.init error: ' + error);
         alert('error: ' + error);
     });
+
+    if (h) h.innerHTML = '[STAGE 3] - INITED';
 
     ATTACHMENT = {
         'media' : [
@@ -69,6 +107,8 @@
         });
     };
 
+    if (h) h.innerHTML = '[STAGE 4] - INIT FAPI';
+
     printParams = function() {
         var params = OKSDK.Util.getRequestParameters();
         var pageinfo = document.getElementById('pageinfo');
@@ -91,44 +131,9 @@
           }
     );
 
+    if (h) h.innerHTML = '[OK] - DONE';
 
 </script>
-
-<br>
-<input type="button" value="OKSDK.post user new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER);">
-<br><br>
-<input type="button" value="OKSDK.post user old" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER, true);">
-<br><br>
-<input type="button" value="OKSDK.post user new LINK" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER_LINK);">
-<br><br>
-<input type="button" value="OKSDK.post user old LINK" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_USER_LINK, true);">
-<br><br>
-<input type="button" value="OKSDK.post group new" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_GROUP);">
-<br><br>
-<input type="button" value="OKSDK.post group old" onclick="OKSDK.Widgets.post(RETURN_URL, TOPIC_GROUP, true);">
-<br><br>                                 
-<input type="button" value="OKSDK.REST.call" onclick="click_post();">
-
-<br><br>
-<input type="button" value="ask GROUP_BOT_API_TOKEN" onclick="OKSDK.Widgets.askGroupAppPermissions('GROUP_BOT_API_TOKEN', RETURN_URL);">
-<br><br>
-<input type="button" value="ask MESSAGES_FROM_GROUP" onclick="OKSDK.Widgets.askGroupAppPermissions('MESSAGES_FROM_GROUP', RETURN_URL);">
-<br><br>
-
-
-<div id="pageinfo" style="background: #AAA;">
-<br>
-PAGE INFO:<br>
-</div>
-<br><br>
-<input type="button" value="GET PAGEINFO" onclick="FAPI.UI.getPageInfo();">
-<br><br>
-<input type="button" value="PRINT PARAMS" onclick="printParams();">
-<br><br>
-
-<div id="hello" style="background: #AFA;">
-HELLO
-</div>
 
 </body>
 </html>
