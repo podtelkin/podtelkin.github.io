@@ -5,6 +5,12 @@
 </head>
 <body>
 <script>
+
+    var h = document.getElementById('hello');
+    if (!h) {
+        h.innerHTML = 'LOADED';
+    }
+    
     var config = {
         app_id: 1250488320,
         groupId: 53615552233562, 
@@ -19,6 +25,7 @@
         console.log('OKSDK.init success');
     }, function (error) {
         console.log('OKSDK.init error: ' + error);
+        alert('error: ' + error);
     });
 
     ATTACHMENT = {
@@ -118,6 +125,9 @@ PAGE INFO:<br>
 <input type="button" value="PRINT PARAMS" onclick="printParams();">
 <br><br>
 
+<div id="hello" style="background: #AFA;">
+HELLO
+</div>
 
 </body>
 </html>
