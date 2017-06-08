@@ -15,6 +15,7 @@
 
     RETURN_URL = 'https://podtelkin.github.io/return.html';
 
+    LOG = document.getElementById('pageinfo');
 
     OKSDK.init(config, function () {
         console.log('OKSDK.init success');
@@ -63,8 +64,10 @@
         });
     };
 
+    PARAMS = OKSDK.Util.getRequestParameters();
 
-    var rParams = FAPI.Util.getRequestParameters();
+    LOG.innerHTML += 'custom_args: ' + PARAMS['custom_args'] + '<br>';
+
     FAPI.init(rParams["api_server"], rParams["apiconnection"],
           function() {
               console.log("FAPI.init OK");
@@ -74,13 +77,10 @@
           }
     );
 
-    FAPI.UI.setWindowSize(500, 720);
-
     API_callback = function(method, result, data) {
-        var el = document.getElementById('pageinfo');
-        el.innerHTML += 'METHOD: ' + method + '<br>';
-        el.innerHTML += 'RESULT: ' + result + '<br>';
-        el.innerHTML += 'DATA  : ' + data + '<br>'; 
+        LOG.innerHTML += 'METHOD: ' + method + '<br>';
+        LOG.innerHTML += 'RESULT: ' + result + '<br>';
+        LOG.innerHTML += 'DATA  : ' + data + '<br>'; 
     };
 
 
