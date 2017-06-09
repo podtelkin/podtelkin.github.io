@@ -13,7 +13,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         if (window.opener) {
             console.log('Return page closed.');
-//            window.close();
+            window.close();
         }
         window.parent.postMessage({event: 'returned'}, '*');
     });
