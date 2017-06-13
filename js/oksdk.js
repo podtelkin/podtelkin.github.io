@@ -1,15 +1,15 @@
 "use strict";
 var OKSDK = (function () {
-    const OK_CONNECT_URL = 'https://connect.ok.ru/';
-    const OK_MOB_URL = 'https://m.ok.ru/';
-    const OK_API_SERVER = 'https://api.ok.ru/';
+    var OK_CONNECT_URL = 'https://connect.ok.ru/';
+    var OK_MOB_URL = 'https://m.ok.ru/';
+    var OK_API_SERVER = 'https://api.ok.ru/';
 
-    const MOBILE = 'mobile';
-    const WEB = 'web';
-    const NATIVE_APP = 'application';
-    const EXTERNAL = 'external';
+    var MOBILE = 'mobile';
+    var WEB = 'web';
+    var NATIVE_APP = 'application';
+    var EXTERNAL = 'external';
 
-    const PLATFORM_REGISTER = {
+    var PLATFORM_REGISTER = {
         'w': WEB,
         'm': MOBILE,
         'n': NATIVE_APP,
@@ -123,7 +123,7 @@ var OKSDK = (function () {
     }
 
     function restCallPOST(query, callback) {
-        const xhr = new XMLHttpRequest();
+        var xhr = new XMLHttpRequest();
         xhr.open("POST", state.baseUrl, true);
         xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
         xhr.onreadystatechange = function() {
@@ -168,8 +168,8 @@ var OKSDK = (function () {
             params['sig'] = calcSignature(params, secret);
         }
 
-        let query = "";
-        for (const key in params) {
+        var query = "";
+        for (var key in params) {
             if (params.hasOwnProperty(key)) {
                 if (query.length !== 0) {
                     query += '&';
@@ -182,7 +182,7 @@ var OKSDK = (function () {
             return restCallPOST(query, callback);
         }
 
-        const callbackId = "__oksdk__callback_" + (++rest_counter);
+        var callbackId = "__oksdk__callback_" + (++rest_counter);
         window[callbackId] = function (status, data, error) {
             if (isFunc(callback)) {
                 callback(status, data, error);
@@ -258,7 +258,7 @@ var OKSDK = (function () {
         params['code'] = productCode;
 
         options = options || {};
-        const host = options['mob_pay_url'] || state.mobServer;
+        var host = options['mob_pay_url'] || state.mobServer;
 
         params["application_key"] = state.app_key;
         if (state.sessionKey) {
@@ -282,7 +282,7 @@ var OKSDK = (function () {
     // Widgets
     // ---------------------------------------------------------------------------------------------------
 
-    const WIDGET_SIGNED_ARGS = ["st.attachment", "st.return", "st.redirect_uri", "st.state"];
+    var WIDGET_SIGNED_ARGS = ["st.attachment", "st.return", "st.redirect_uri", "st.state"];
 
     /**
      * Returns HTML to be used as a back button for mobile app<br/>
@@ -457,10 +457,14 @@ var OKSDK = (function () {
     // ---------------------------------------------------------------------------------------------------
 
 
+    /**
+     * @param {String} widgetName
+     * @constructor
+     */
     function WidgetConfigurator(widgetName) {
         this.name = widgetName;
+        this.configAdapter = nop;
         this.adapters = {};
-        this.uiLayerName = null;
     }
 
     WidgetConfigurator.prototype = {
@@ -471,6 +475,10 @@ var OKSDK = (function () {
         },
         withValidators: function (validators) {
             this.validators = validators;
+            return this;
+        },
+        withConfigAdapter: function (adapterFn) {
+            this.configAdapter = adapterFn;
             return this;
         },
         withAdapters: function (adapters) {
@@ -510,25 +518,22 @@ var OKSDK = (function () {
         }
     };
 
+    /**
+     *
+     * @param {WidgetConfigurator | String} widget
+     * @param {Object} [options]
+     * @constructor
+     */
     function WidgetLayerBuilder(widget, options) {
         if (widget instanceof WidgetConfigurator === false) {
             widget = new WidgetConfigurator(widget);
         }
 
-        this.widgetName = widget.name;
-        this.handlerConf = widget;
+        this.widgetConf = widget;
         this.options = options || {};
-
-        var adapters = this.handlerConf.adapters;
-        if (adapters) {
-            this.adapters = this._createMethodSuppliers(adapters);
-        }
-
-        var validators = this.handlerConf.validators;
-        if (validators) {
-            this.validators = this._createMethodSuppliers(validators);
-        }
-
+        this.configAdapter = this.widgetConf.configAdapter;
+        this.adapters = this._createMethodSuppliers(this.widgetConf.adapters);
+        this.validators = this._createMethodSuppliers(this.widgetConf.validators);
         this._callContext = resolveContext();
     }
 
@@ -539,11 +544,12 @@ var OKSDK = (function () {
         _callContext: {},
         /**
          * @private
+         * @description resolve when method is allowed to use relate to application envinronment context
          */
         _validatorRegister: {
             openUiLayer: function () {
                 var context = this._callContext;
-                return this.handlerConf.uiLayerName && !(context.isExternal || context.isMob);
+                return this.widgetConf.uiLayerName && !(context.isExternal || context.isMob);
             },
             openIframeLayer: function () {
                 return false;
@@ -552,16 +558,24 @@ var OKSDK = (function () {
                 return true;
             }
         },
+
         /**
          * @private
+         *
+         * @param {Object} methodMap    see: WidgetLayerBuilder.widgetInterface
+         * @param {Function} methodMap.openPopup
+         * @param {Function} methodMap.openUiLayer
+         * @param {Function} methodMap.openIframeLayer
          */
         _createMethodSuppliers: function (methodMap) {
             var result = {};
-            var widgetInterface = this.widgetInterface;
-            for (var i = 0, l = widgetInterface.length; i < l; i++) {
-                var m = widgetInterface[i];
-                if (methodMap.hasOwnProperty(m)) {
-                    result[m] = methodMap[m];
+            if (methodMap) {
+                var widgetInterface = this.widgetInterface;
+                for (var i = 0, l = widgetInterface.length; i < l; i++) {
+                    var m = widgetInterface[i];
+                    if (methodMap.hasOwnProperty(m)) {
+                        result[m] = methodMap[m];
+                    }
                 }
             }
 
@@ -574,7 +588,7 @@ var OKSDK = (function () {
                 'openIframeLayer'
             ],
         openPopup: function () {
-            return widgetOpen(this.widgetName, this.options);
+            return widgetOpen(this.widgetConf.name, this.options);
         },
         openUiLayer: function () {
             return invokeUIMethod.apply(null, this.options);
@@ -587,18 +601,20 @@ var OKSDK = (function () {
             var options = this.options;
             options.client_id = options.client_id || state.app_id;
 
-            var validatorRegister = this._validatorRegister;
+            this.configAdapter(state);
 
+            var validatorRegister = this._validatorRegister;
             for (var method in validatorRegister) {
                 var result = validatorRegister[method].call(this);
-                var customValidators = this.validators;
-                result = customValidators ? customValidators[method].call(this) : result;
+                if (this.validators[method]) {
+                    result = this.validators[method].call(this);
+                }
 
                 // убеждаемся, что такой метод есть в прототипе конструтора
                 if (result && (!this.hasOwnProperty(method) && method in this)) {
                     var adapter = this.adapters[method];
                     if (adapter) {
-                        this.options = adapter(this.handlerConf, options);
+                        this.options = adapter(this.widgetConf, options);
                     }
                     return this[method]();
                 }
@@ -690,11 +706,11 @@ var OKSDK = (function () {
      * @returns {String}
      */
     function md5(str) {
-        const hex_chr = "0123456789abcdef";
+        var hex_chr = "0123456789abcdef";
 
         function rhex(num) {
-            let str = "";
-            for (let j = 0; j <= 3; j++) {
+            var str = "";
+            for (var j = 0; j <= 3; j++) {
                 str += hex_chr.charAt((num >> (j * 8 + 4)) & 0x0F) +
                     hex_chr.charAt((num >> (j * 8)) & 0x0F);
             }
@@ -706,9 +722,9 @@ var OKSDK = (function () {
          * Append padding bits and the length, as described in the MD5 standard.
          */
         function str2blks_MD5(str) {
-            let nblk = ((str.length + 8) >> 6) + 1;
-            let blks = new Array(nblk * 16);
-            let i = 0;
+            var nblk = ((str.length + 8) >> 6) + 1;
+            var blks = new Array(nblk * 16);
+            var i = 0;
             for (i = 0; i < nblk * 16; i++) {
                 blks[i] = 0;
             }
@@ -725,8 +741,8 @@ var OKSDK = (function () {
          * to work around bugs in some JS interpreters.
          */
         function add(x, y) {
-            let lsw = (x & 0xFFFF) + (y & 0xFFFF);
-            let msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+            var lsw = (x & 0xFFFF) + (y & 0xFFFF);
+            var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
             return (msw << 16) | (lsw & 0xFFFF);
         }
 
@@ -761,17 +777,17 @@ var OKSDK = (function () {
             return cmn(c ^ (b | (~d)), a, b, x, s, t);
         }
 
-        let x = str2blks_MD5(str);
-        let a = 1732584193;
-        let b = -271733879;
-        let c = -1732584194;
-        let d = 271733878;
+        var x = str2blks_MD5(str);
+        var a = 1732584193;
+        var b = -271733879;
+        var c = -1732584194;
+        var d = 271733878;
 
-        for (let i = 0; i < x.length; i += 16) {
-            const olda = a;
-            const oldb = b;
-            const oldc = c;
-            const oldd = d;
+        for (var i = 0; i < x.length; i += 16) {
+            var olda = a;
+            var oldb = b;
+            var oldc = c;
+            var oldd = d;
 
             a = ff(a, b, c, d, x[i + 0], 7, -680876936);
             d = ff(d, a, b, c, x[i + 1], 12, -389564586);
@@ -851,28 +867,28 @@ var OKSDK = (function () {
 
     /**
      *
-     * @param oldObj {Object}    obj where copy to
-     * @param newObj {Object}    obj where copied from
+     * @param receiver {Object}    obj where copy to
+     * @param donor {Object}    obj where copied from
      * @param [rewrite=true] {boolean}
      * @returns {*}
      */
-    function mergeObject(oldObj, newObj, rewrite) {
-        if (getClass(newObj) == getClass._object && getClass(oldObj) == getClass._object) {
-            for (var k in newObj) {
-                if (newObj.hasOwnProperty(k)) {
-                    if (oldObj.hasOwnProperty(k) && typeof rewrite !== 'undefined' && !rewrite) {
+    function mergeObject(receiver, donor, rewrite) {
+        if (getClass(donor) == getClass._object && getClass(receiver) == getClass._object) {
+            for (var k in donor) {
+                if (donor.hasOwnProperty(k)) {
+                    if (receiver.hasOwnProperty(k) && typeof rewrite !== 'undefined' && !rewrite) {
                         continue;
                     }
-                    var property = newObj[k];
+                    var property = donor[k];
                     if (getClass(property) == getClass._object) {
-                        mergeObject(oldObj[k] = oldObj[k] || {}, property, rewrite);
+                        mergeObject(receiver[k] = receiver[k] || {}, property, rewrite);
                     } else {
-                        oldObj[k] = property;
+                        receiver[k] = property;
                     }
                 }
             }
 
-            return oldObj;
+            return receiver;
         }
 
         return new Error('Merged elements should be an objects');
@@ -975,7 +991,15 @@ var OKSDK = (function () {
                         })
                 ),
                 suggest: new WidgetLayerBuilder('WidgetSuggest'),
-                askGroupAppPermissions: new WidgetLayerBuilder('WidgetGroupAppPermissions')
+                askGroupAppPermissions: new WidgetLayerBuilder(
+                    new WidgetConfigurator('WidgetGroupAppPermissions')
+                        .withConfigAdapter(function (state) {
+                            var groupId = this.options.groupId;
+                            if (!groupId) {
+                                this.options.groupId = state.groupId;
+                            }
+                        })
+                )
             },
             getBackButtonHtml: widgetBackButton,
             post: widgetMediatopicPost,
