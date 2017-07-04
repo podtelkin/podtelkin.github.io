@@ -15,6 +15,9 @@ var OKSDK = (function () {
         'n': NATIVE_APP,
         'e': EXTERNAL
     };
+
+    var APP_EXTLINK_REGEXP = /\bjs-sdk-extlink\b/;
+
     var state = {
         app_id: 0, app_key: '',
         sessionKey: '', accessToken: '', sessionSecretKey: '', apiServer: '', widgetServer: '', mobServer: '',
@@ -71,12 +74,12 @@ var OKSDK = (function () {
         state.baseUrl = state.apiServer + "fb.do";
         state.header_widget = params['header_widget'];
         state.container = params['container'];
-        state.layout = (params['layout'] || hParams['layout'])
-            || (params['api_server']
-                ? (params['apiconnection']
-                    ? 'w'
-                    : 'm')
-                : args.layout);
+        state.layout = (params['layout'] || hParams['layout'] || args.layout)
+            || params['api_server']
+                ? params['mob'] && params['mob'] === 'true'
+                    ? 'm'
+                    : 'w'
+                : 'w';
 
         if (!params['api_server']) {
             if ((hParams['access_token'] == null) && (hParams['error'] == null)) {
@@ -346,14 +349,24 @@ var OKSDK = (function () {
      *
      * @param {String} returnUrl callback url
      * @param {Object} [options] options
+     * @param {boolean} forcePopup  fallback for old method to open widget
      * @param {int} [options.autosel] amount of friends to be preselected
      * @param {String} [options.comment] default text set in the suggestion text field
      * @param {String} [options.custom_args] custom args to be passed when app opened from suggestion
      * @param {String} [options.state] custom args to be passed to return url
      * @param {String} [options.target] comma-separated friend IDs that should be preselected by default
      */
-    function widgetSuggest(returnUrl, options) {
-        widgetOpen('WidgetSuggest', options, returnUrl);
+    function widgetSuggest(returnUrl, options, forcePopup) {
+        if (forcePopup) {
+            widgetOpen('WidgetSuggest', options, returnUrl);
+        } else {
+            OKSDK.Widgets.builds.suggest.configure(
+                OKSDK.Util.mergeObject(
+                    options,
+                    {return: returnUrl}
+                )
+            ).run();
+        }
     }
 
     function widgetGroupAppPermissions(scope, returnUrl, options) {
@@ -417,6 +430,8 @@ var OKSDK = (function () {
         } else {
             popup = window.open(getLinkOnWidget(widget, args));
         }
+
+        //window.console && console.log('popup', popup);
 
         return popup;
     }
@@ -597,10 +612,10 @@ var OKSDK = (function () {
             return window.console && console.log('Iframe-layer is in development');
         },
         run: function () {
-
             var options = this.options;
             options.client_id = options.client_id || state.app_id;
-
+            // TODO: make state update to be optional;
+            this._callContext = resolveContext();
             this.configAdapter(state);
 
             var validatorRegister = this._validatorRegister;
@@ -688,10 +703,10 @@ var OKSDK = (function () {
             isOKApp: state.container || false,
             isOAuth: stateMode === 'o',
             isIframe: window.parent !== window,
-            isPopup: !!window.opener
+            isPopup: window.opener !== window
         };
         context.isExternal = context.layout == EXTERNAL || !(context.isIframe || context.isPopup || context.isOAuth);
-        context.isMob = context.layout == WEB || context.layout == NATIVE_APP;
+        context.isMob = context.layout === MOBILE || context.layout === NATIVE_APP;
         return context;
     }
 
@@ -894,6 +909,33 @@ var OKSDK = (function () {
         return new Error('Merged elements should be an objects');
     }
 
+    function processExternalLink(e) {
+        var target = e.target;
+        var href;
+        var tries = 5;
+
+        if (target) {
+            while (!isMarkedAsExternalLink(target) && tries) {
+                target = target.parentNode;
+                tries--;
+            }
+
+            href = target.href;
+
+            if (resolveContext().isOKApp && href) { // todo: check for app ctx
+                target.href = createExternalAppLink(href);
+            }
+        }
+    }
+
+    function isMarkedAsExternalLink(target) {
+        return target.className.match(APP_EXTLINK_REGEXP);
+    }
+
+    function createExternalAppLink(href) {
+        return '/apphook/outlink/' + href;
+    }
+
     function getClass(o) {
         return Object.prototype.toString.call(o);
     }
@@ -953,6 +995,52 @@ var OKSDK = (function () {
 
     // ---------------------------------------------------------------------------------------------------
 
+
+
+    // ---------------------------------------------------------------------------------------------------
+    // Widget configurations
+    // ---------------------------------------------------------------------------------------------------
+
+    var widgetConfigs = {
+        groupPermission: new WidgetConfigurator('WidgetGroupAppPermissions')
+            .withUiLayerName('showGroupPermissions')
+            .withUiAdapter(function (data, options) {
+                return [
+                    data.uiLayerName,
+                    options.scope,
+                    options.groupId
+                ];
+            })
+            .withConfigAdapter(function (state) {
+                var groupId = this.options.groupId;
+                if (!groupId) {
+                    this.options.groupId = state.groupId;
+                }
+            }),
+        post: new WidgetConfigurator('WidgetMediatopicPost')
+            .withUiLayerName('postMediatopic')
+            .withUiAdapter(function (data, options) {
+                return [
+                    data.uiLayerName,
+                    JSON.stringify(options.attachment),
+                    options.status ? 'on' : 'off',
+                    options.platforms ? options.platforms.join(',') : '',
+                    options.groupId
+                ];
+            })
+            .withPopupAdapter(function (data, options) {
+                options.attachment = btoa(unescape(encodeURIComponent(toString(options.attachment))));
+                return options;
+            }),
+        invite: new WidgetConfigurator('WidgetInvite')
+            .withUiLayerName('showInvite')
+            .withUiAdapter(function (data, options) {
+                return [data.uiLayerName, options.text, options.params, options.uids];
+            })
+    };
+
+    // ---------------------------------------------------------------------------------------------------
+
     return {
         init: init,
         REST: {
@@ -965,41 +1053,16 @@ var OKSDK = (function () {
         Widgets: {
             Builder: WidgetLayerBuilder,
             WidgetConfigurator: WidgetConfigurator,
+            configs: {
+                groupPermission: widgetConfigs.groupPermission,
+                post: widgetConfigs.post,
+                invite: widgetConfigs.invite
+            },
             builds: {
-                post: new WidgetLayerBuilder(
-                    new WidgetConfigurator('WidgetMediatopicPost')
-                        .withUiLayerName('postMediatopic')
-                        .withUiAdapter(function (data, options) {
-                            return [
-                                data.uiLayerName,
-                                JSON.stringify(options.attachment),
-                                options.status ? 'on' : 'off',
-                                options.platforms ? options.platforms.join(',') : '',
-                                options.groupId
-                            ];
-                        })
-                        .withPopupAdapter(function (data, options) {
-                            options.attachment = btoa(unescape(encodeURIComponent(toString(options.attachment))));
-                            return options;
-                        })
-                ),
-                invite: new WidgetLayerBuilder(
-                    new WidgetConfigurator('WidgetInvite')
-                        .withUiLayerName('showInvite')
-                        .withUiAdapter(function (data, options) {
-                            return [data.uiLayerName, options.text, options.params, options.uids];
-                        })
-                ),
+                post: new WidgetLayerBuilder(widgetConfigs.post),
+                invite: new WidgetLayerBuilder(widgetConfigs.invite),
                 suggest: new WidgetLayerBuilder('WidgetSuggest'),
-                askGroupAppPermissions: new WidgetLayerBuilder(
-                    new WidgetConfigurator('WidgetGroupAppPermissions')
-                        .withConfigAdapter(function (state) {
-                            var groupId = this.options.groupId;
-                            if (!groupId) {
-                                this.options.groupId = state.groupId;
-                            }
-                        })
-                )
+                askGroupAppPermissions: new WidgetLayerBuilder(widgetConfigs.groupPermission)
             },
             getBackButtonHtml: widgetBackButton,
             post: widgetMediatopicPost,
@@ -1016,7 +1079,19 @@ var OKSDK = (function () {
             getRequestParameters: getRequestParameters,
             toString: toString,
             resolveContext: resolveContext,
-            mergeObject: mergeObject
+            mergeObject: mergeObject,
+            initExternalLinkHandler: function (appHookClass) {
+                if (typeof appHookClass !== 'undefined' && appHookClass.indexOf('.') === -1) {
+                    APP_EXTLINK_REGEXP = new RegExp('\\b'+appHookClass+'\\b');
+                }
+                document.body.addEventListener('click', processExternalLink, false);
+            },
+            removeExternalLinkHandler: function () {
+                document.body.removeEventListener('click', processExternalLink, false);
+            },
+            openExternalAppLink: function (href) {
+                return location.assign(createExternalAppLink(href));
+            }
         }
     };
 })();
