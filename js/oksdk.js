@@ -16,7 +16,7 @@ var OKSDK = (function () {
         'e': EXTERNAL
     };
 
-    var APP_EXTLINK_REGEXP = /\bjs-sdk-extlink\b/;
+    var APP_EXTLINK_REGEXP = /\bjs-ok-extlink\b/;
 
     var state = {
         app_id: 0, app_key: '',
@@ -25,9 +25,11 @@ var OKSDK = (function () {
         container: false,
         header_widget: ''
     };
-    var sdk_success = nop;
-    var sdk_failure = nop;
+    var sdk_success = stub_func;
+    var sdk_failure = stub_func;
     var rest_counter = 0;
+    var extLinkListenerOn = false;
+    var externalLinkHandler = stub_func;
 
     // ---------------------------------------------------------------------------------------------------
     // General
@@ -50,8 +52,14 @@ var OKSDK = (function () {
      */
     function init(args, success, failure) {
         args.oauth = args.oauth || {};
-        sdk_success = isFunc(success) ? success : nop;
-        sdk_failure = isFunc(failure) ? failure : nop;
+
+        if (isFunc(success)) {
+            sdk_success = success;
+        }
+
+        if (isFunc(failure)) {
+            sdk_failure = failure;
+        }
 
         var params = getRequestParameters(args['location_search'] || window.location.search);
         var hParams = getRequestParameters(args['location_hash'] || window.location.hash);
@@ -478,7 +486,7 @@ var OKSDK = (function () {
      */
     function WidgetConfigurator(widgetName) {
         this.name = widgetName;
-        this.configAdapter = nop;
+        this.configAdapter = stub_func;
         this.adapters = {};
     }
 
@@ -921,9 +929,8 @@ var OKSDK = (function () {
             }
 
             href = target.href;
-
-            if (resolveContext().isOKApp && href) { // todo: check for app ctx
-                target.href = createExternalAppLink(href);
+            if (href) {
+                target.href = createAppExternalLink(href);
             }
         }
     }
@@ -932,8 +939,12 @@ var OKSDK = (function () {
         return target.className.match(APP_EXTLINK_REGEXP);
     }
 
-    function createExternalAppLink(href) {
-        return '/apphook/outlink/' + href;
+    function createAppExternalLink(href) {
+        if (resolveContext().isOKApp) {
+            return '/apphook/outlink/' + href;
+        }
+
+        return href;
     }
 
     function getClass(o) {
@@ -941,7 +952,7 @@ var OKSDK = (function () {
     }
 
     getClass._object = getClass({}); // [object Object]
-    getClass._function = getClass(nop); // [object Function]
+    getClass._function = getClass(stub_func); // [object Function]
     getClass._array = getClass([]); // [object Array]
     getClass._string = getClass(''); // [object String]
 
@@ -990,7 +1001,7 @@ var OKSDK = (function () {
     }
 
     /** stub func */
-    function nop() {
+    function stub_func() {
     }
 
     // ---------------------------------------------------------------------------------------------------
@@ -1080,17 +1091,27 @@ var OKSDK = (function () {
             toString: toString,
             resolveContext: resolveContext,
             mergeObject: mergeObject,
-            initExternalLinkHandler: function (appHookClass) {
-                if (typeof appHookClass !== 'undefined' && appHookClass.indexOf('.') === -1) {
-                    APP_EXTLINK_REGEXP = new RegExp('\\b'+appHookClass+'\\b');
+            openAppExternalLink: function (href) {
+                return location.assign(createAppExternalLink(href));
+            },
+            addExternalLinksListener: function (appHookClass, eventDecorator) {
+                if (!extLinkListenerOn) {
+                    if (typeof appHookClass !== 'undefined' && appHookClass.indexOf('.') === -1) {
+                        APP_EXTLINK_REGEXP = new RegExp('\\b'+appHookClass+'\\b');
+                    }
+
+                    externalLinkHandler =  function (e) {
+                        var _event = eventDecorator ? eventDecorator(e) : e;
+                        processExternalLink(_event);
+                    };
+
+                    document.body.addEventListener('click', externalLinkHandler, false);
+                    extLinkListenerOn = true;
                 }
-                document.body.addEventListener('click', processExternalLink, false);
             },
-            removeExternalLinkHandler: function () {
-                document.body.removeEventListener('click', processExternalLink, false);
-            },
-            openExternalAppLink: function (href) {
-                return location.assign(createExternalAppLink(href));
+            removeExternalLinksListener: function () {
+                document.body.removeEventListener('click', externalLinkHandler, false);
+                extLinkListenerOn = false;
             }
         }
     };
