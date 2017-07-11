@@ -706,12 +706,19 @@ var OKSDK = (function () {
      */
     function resolveContext() {
         var stateMode = state.layout && state.layout.toLowerCase();
+        var userAgent = navigator.userAgent.toLowerCase();
+        var IOS_UA_REG = /(iphone|ipad|ipod)/g;
+        var ANDROID_UA_REG = /android/g;
+        var WP_UA_REG = /windows phone/g;
         var context = {
             layout: PLATFORM_REGISTER[stateMode],
-            isOKApp: state.container || false,
+            isOKApp: state.container,
             isOAuth: stateMode === 'o',
             isIframe: window.parent !== window,
-            isPopup: window.opener !== window
+            isPopup: window.opener !== window,
+            isAndroid: ANDROID_UA_REG.test(userAgent),
+            isIOS: IOS_UA_REG.test(userAgent),
+            isWP: WP_UA_REG.test(userAgent)
         };
         context.isExternal = context.layout == EXTERNAL || !(context.isIframe || context.isPopup || context.isOAuth);
         context.isMob = context.layout === MOBILE || context.layout === NATIVE_APP;
@@ -921,27 +928,31 @@ var OKSDK = (function () {
         var target = e.target;
         var href;
         var tries = 5;
+        var isValidTarget = isValidOutlinkTarget(target);
 
-        if (target) {
-            while (!isMarkedAsExternalLink(target) && tries) {
-                target = target.parentNode;
-                tries--;
-            }
+        while (!isValidTarget && tries) {
+            target = target.parentNode;
+            isValidTarget = isValidOutlinkTarget(target);
+            tries--;
+        }
 
+        if (isValidTarget) {
             href = target.href;
             if (href) {
+                target.setAttribute('target', '_self');
                 target.href = createAppExternalLink(href);
             }
         }
     }
 
-    function isMarkedAsExternalLink(target) {
-        return target.className.match(APP_EXTLINK_REGEXP);
+    function isValidOutlinkTarget(target) {
+        return target && target.className && target.className.match(APP_EXTLINK_REGEXP);
     }
 
     function createAppExternalLink(href) {
-        if (resolveContext().isOKApp) {
-            return '/apphook/outlink/' + href;
+        var context = resolveContext();
+        if (context.isOKApp) {
+            return (context.isIOS ? 'apphook:outlink:' : '/apphook/outlink?url=') + href;
         }
 
         return href;
@@ -1091,8 +1102,11 @@ var OKSDK = (function () {
             toString: toString,
             resolveContext: resolveContext,
             mergeObject: mergeObject,
-            openAppExternalLink: function (href) {
-                return location.assign(createAppExternalLink(href));
+            openAppExternalLink: function (href, useSameFrame) {
+                if (useSameFrame === true) {
+                    return location.assign(href);
+                }
+                return window.open(createAppExternalLink(href));
             },
             addExternalLinksListener: function (appHookClass, eventDecorator) {
                 if (!extLinkListenerOn) {
