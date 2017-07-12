@@ -53,6 +53,12 @@ var OKSDK = (function () {
     function init(args, success, failure) {
         args.oauth = args.oauth || {};
 
+        if (args.use_extlinks) {
+            OKSDK.Util.addExternalLinksListener();
+        } else {
+            OKSDK.Util.removeExternalLinksListener();
+        }
+
         if (isFunc(success)) {
             sdk_success = success;
         }
@@ -712,7 +718,7 @@ var OKSDK = (function () {
         var WP_UA_REG = /windows phone/g;
         var context = {
             layout: PLATFORM_REGISTER[stateMode],
-            isOKApp: state.container,
+            isOKApp: Boolean(state.container),
             isOAuth: stateMode === 'o',
             isIframe: window.parent !== window,
             isPopup: window.opener !== window,
@@ -722,7 +728,8 @@ var OKSDK = (function () {
         };
         context.isExternal = context.layout == EXTERNAL || !(context.isIframe || context.isPopup || context.isOAuth);
         context.isMob = context.layout === MOBILE || context.layout === NATIVE_APP;
-        return context;
+
+        return state.context = context;
     }
 
 
@@ -937,9 +944,16 @@ var OKSDK = (function () {
         }
 
         if (isValidTarget) {
+            if (state.context || resolveContext()) {
+                if (state.context.isOKApp) {
+                    target.removeAttribute('target');
+                } else if (state.context.isIframe) {
+                    target.setAttribute('target', '_blank');
+                }
+            }
+
             href = target.href;
             if (href) {
-                target.setAttribute('target', '_blank');
                 target.href = createAppExternalLink(href);
             }
         }
@@ -952,7 +966,7 @@ var OKSDK = (function () {
     function createAppExternalLink(href) {
         var context = resolveContext();
         if (context.isOKApp) {
-            return (context.isIOS ? 'apphook:outlink:' : '/apphook/outlink?url=') + href;
+            return (context.isIOS ? 'apphook:applink:' : 'https://ok.ru/apphook/outlink?url=') + href;
         }
 
         return href;
@@ -1110,6 +1124,8 @@ var OKSDK = (function () {
             },
             addExternalLinksListener: function (appHookClass, eventDecorator) {
                 if (!extLinkListenerOn) {
+                    resolveContext();
+
                     if (typeof appHookClass !== 'undefined' && appHookClass.indexOf('.') === -1) {
                         APP_EXTLINK_REGEXP = new RegExp('\\b'+appHookClass+'\\b');
                     }
