@@ -129,25 +129,64 @@
 <br><br><a href="javascript:OKSDK.Util.openAppExternalLink('https://m.lenta.ru');" target="_blank">extlink with js</a>
 <br><br>
 WebRTC:<br>
+<div class="demo-wrapper">
+	<video id="video" width="640" height="480" autoplay="" src="blob:https://davidwalsh.name/ae513d31-1a9f-490f-9496-c8b602a212fc"></video>
+	<button id="snap" class="sexyButton">Snap Photo</button>
+	<canvas id="canvas" width="640" height="480"></canvas>
 
-<video id="video" width="640" height="480" autoplay></video>
-<button id="snap">Snap Photo</button>
-<canvas id="canvas" width="640" height="480"></canvas>
+	<script>
+           print('Loading WebRTC...');
 
-<script>
-print('Loading navigator.mediaDevices...');
-var video = document.getElementById('video');
+		// Put event listeners into place
+		window.addEventListener("DOMContentLoaded", function() {
+			// Grab elements, create settings, etc.
+            var canvas = document.getElementById('canvas');
+            var context = canvas.getContext('2d');
+            var video = document.getElementById('video');
+            var mediaConfig =  { video: true };
+            var errBack = function(e) {
+            	console.log('An error has occurred!', e)
+            };
 
-if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    print('navigator.mediaDevices - [OK]');
-    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
-        video.src = window.URL.createObjectURL(stream);
-        video.play();
-    });
-} else {
-    print('navigator.mediaDevices - [NONE]');
-}
-</script>
+			// Put video listeners into place
+            if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                print('WebRTC - [NEW]');
+                navigator.mediaDevices.getUserMedia(mediaConfig).then(function(stream) {
+                    video.src = window.URL.createObjectURL(stream);
+                    video.play();
+                });
+            }
+
+            /* Legacy code below! */
+            else if(navigator.getUserMedia) { // Standard
+                                print('WebRTC - [Standard]');
+				navigator.getUserMedia(mediaConfig, function(stream) {
+					video.src = stream;
+					video.play();
+				}, errBack);
+			} else if(navigator.webkitGetUserMedia) { // WebKit-prefixed
+                                print('WebRTC - [WebKit-prefixed]');
+				navigator.webkitGetUserMedia(mediaConfig, function(stream){
+					video.src = window.webkitURL.createObjectURL(stream);
+					video.play();
+				}, errBack);
+			} else if(navigator.mozGetUserMedia) { // Mozilla-prefixed
+                                print('WebRTC - [Mozilla-prefixed]');
+				navigator.mozGetUserMedia(mediaConfig, function(stream){
+					video.src = window.URL.createObjectURL(stream);
+					video.play();
+				}, errBack);
+			}
+
+			// Trigger photo take
+			document.getElementById('snap').addEventListener('click', function() {
+				context.drawImage(video, 0, 0, 640, 480);
+			});
+		}, false);
+
+	</script>
+
+</div>
 
 </body>
 </html>
