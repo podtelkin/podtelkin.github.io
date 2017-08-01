@@ -138,5 +138,27 @@ capture=camcorder:<br>
 capture=microphone:<br>
 <input type="file" accept="audio/*;capture=microphone"><br>
 
+<br><br>
+WebRTC:<br>
+
+<video id="video" width="640" height="480" autoplay></video>
+<button id="snap">Snap Photo</button>
+<canvas id="canvas" width="640" height="480"></canvas>
+
+<script>
+print('Loading navigator.mediaDevices...');
+var video = document.getElementById('video');
+
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    print('navigator.mediaDevices - [OK]');
+    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+        video.src = window.URL.createObjectURL(stream);
+        video.play();
+    });
+} else {
+    print('navigator.mediaDevices - [DONE]');
+}
+</script>
+
 </body>
 </html>
