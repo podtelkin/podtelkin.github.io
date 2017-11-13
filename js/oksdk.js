@@ -16,7 +16,7 @@ var OKSDK = (function () {
         'e': EXTERNAL
     };
 
-    var APP_EXTLINK_REGEXP = /\bjs-ok-extlink\b/;
+    var APP_EXTLINK_REGEXP = /\bjs-sdk-extlink\b/;
 
     var state = {
         app_id: 0, app_key: '',
@@ -55,7 +55,7 @@ var OKSDK = (function () {
 
         if (args.use_extlinks) {
             OKSDK.Util.addExternalLinksListener(args.use_extlinks.customClass, args.use_extlinks.decorator);
-        } else {
+        } else if (extLinkListenerOn) {
             OKSDK.Util.removeExternalLinksListener();
         }
 
@@ -377,36 +377,58 @@ var OKSDK = (function () {
             OKSDK.Widgets.builds.suggest.configure(
                 OKSDK.Util.mergeObject(
                     options,
-                    {return: returnUrl}
+                    { return: returnUrl }
                 )
             ).run();
         }
     }
 
+    function widgetUserAppPermissions(scope, returnUrl, options) {
+        options = options || {};
+        scope = getInnerType(scope) == getInnerType._array ? scope.join(';') : scope;
+
+        OKSDK.Widgets.builds.askUserAppPermissions
+            .configure(
+                OKSDK.Util.mergeObject(
+                    options,
+                    /* this will be translated in request query as params */
+                    {
+                        scope: scope,
+                        redirect_uri: returnUrl,
+                        response_type: 'token',
+                        popupConfig: { width: 600, height: 300 }
+                    },
+                    false
+                )
+            )
+            .run();
+    }
+
     function widgetGroupAppPermissions(scope, returnUrl, options) {
         options = options || {};
         options.groupId = options.groupId || state.groupId;
+        scope = getInnerType(scope) == getInnerType._array ? scope.join(';') : scope;
 
-        OKSDK.Widgets.builds.askGroupAppPermissions.configure(
-            OKSDK.Util.mergeObject(
-                options,
-                {
-                    scope: (getClass(scope) == '[object Array]' ? scope.join(';') : scope),
-                    // TODO: dmitrylapynov: unify param name as 'return_uri -> return';
-                    redirect_uri: returnUrl,
-                    popupConfig: {
-                        width: 600,
-                        height: 300
-                    }
-                },
-                false
+        OKSDK.Widgets.builds.askGroupAppPermissions
+            .configure(
+                OKSDK.Util.mergeObject(
+                    options,
+                    /* this will be translated in request query as params */
+                    {
+                        scope: scope,
+                        redirect_uri: returnUrl,
+                        response_type: 'token',
+                        popupConfig: { width: 600, height: 300 }
+                    },
+                    false
+                )
             )
-        ).run();
+            .run();
     }
 
     function widgetOpen(widget, args, returnUrl) {
         args = args || {};
-        args.return = args.return || returnUrl;
+        args.return = args.return || returnUrl || args.redirect_uri;
         var popupConfig = args.popupConfig;
         var popup;
 
@@ -430,10 +452,10 @@ var OKSDK = (function () {
                 var top = (screenHeight / 2 - h / 2) + screenOffsetTop;
             }
 
-            var popupName = popupConfig.name + Date.now();
+
             popup = window.open(
                 getLinkOnWidget(widget, args),
-                popupName,
+                '',
                 'width=' + w + ',' +
                 'height=' + h + ',' +
                 'top=' + top + ',' +
@@ -444,8 +466,6 @@ var OKSDK = (function () {
         } else {
             popup = window.open(getLinkOnWidget(widget, args));
         }
-
-        //window.console && console.log('popup', popup);
 
         return popup;
     }
@@ -617,17 +637,21 @@ var OKSDK = (function () {
                 'openIframeLayer'
             ],
         openPopup: function () {
-            return widgetOpen(this.widgetConf.name, this.options);
+            return widgetOpen(this.widgetConf.name, this.adaptedOptions || this.options);
         },
         openUiLayer: function () {
-            return invokeUIMethod.apply(null, this.options);
+            return invokeUIMethod.apply(null, this.adaptedOptions || this.options);
         },
         openIframeLayer: function () {
-            return window.console && console.log('Iframe-layer is in development');
+            // 'iframe-layer feature is under development'
         },
         run: function () {
-            var options = this.options;
-            options.client_id = options.client_id || state.app_id;
+            var clientId = this.options.client_id;
+            if (typeof clientId == 'undefined'
+                || (getInnerType(clientId) == getInnerType._string && clientId.length < 1)) {
+
+                this.options.client_id = state.app_id;
+            }
             // TODO: make state update to be optional;
             this._callContext = resolveContext();
             this.configAdapter(state);
@@ -643,7 +667,7 @@ var OKSDK = (function () {
                 if (result && (!this.hasOwnProperty(method) && method in this)) {
                     var adapter = this.adapters[method];
                     if (adapter) {
-                        this.options = adapter(this.widgetConf, options);
+                        this.adaptedOptions = adapter(this.widgetConf, this.options);
                     }
                     return this[method]();
                 }
@@ -720,8 +744,8 @@ var OKSDK = (function () {
             layout: PLATFORM_REGISTER[stateMode],
             isOKApp: Boolean(state.container),
             isOAuth: stateMode === 'o',
-            isIframe: window.parent !== window,
-            isPopup: window.opener !== window,
+            isIframe: window.parent && window.parent !== window,
+            isPopup: window.opener && window.opener !== window,
             isAndroid: ANDROID_UA_REG.test(userAgent),
             isIOS: IOS_UA_REG.test(userAgent),
             isWP: WP_UA_REG.test(userAgent)
@@ -910,14 +934,14 @@ var OKSDK = (function () {
      * @returns {*}
      */
     function mergeObject(receiver, donor, rewrite) {
-        if (getClass(donor) == getClass._object && getClass(receiver) == getClass._object) {
+        if (getInnerType(donor) == getInnerType._object && getInnerType(receiver) == getInnerType._object) {
             for (var k in donor) {
                 if (donor.hasOwnProperty(k)) {
                     if (receiver.hasOwnProperty(k) && typeof rewrite !== 'undefined' && !rewrite) {
                         continue;
                     }
                     var property = donor[k];
-                    if (getClass(property) == getClass._object) {
+                    if (getInnerType(property) == getInnerType._object) {
                         mergeObject(receiver[k] = receiver[k] || {}, property, rewrite);
                     } else {
                         receiver[k] = property;
@@ -928,16 +952,17 @@ var OKSDK = (function () {
             return receiver;
         }
 
-        return new Error('Merged elements should be an objects');
+        return new Error('Both merged elements should be instances of an Object type');
     }
 
     function processExternalLink(e) {
         var target = e.target;
         var href;
         var tries = 5;
+
         var isValidTarget = isHandledExtlink(target);
 
-        while (!isValidTarget && tries) {
+        while (!isValidTarget && target && tries) {
             isValidTarget = isHandledExtlink(target = target.parentNode);
             tries--;
         }
@@ -956,13 +981,13 @@ var OKSDK = (function () {
                 target.href = createAppExternalLink(href);
             }
         }
+
     }
 
     function isHandledExtlink(target) {
         return target
-            && target.tagName.toLowerCase() === 'a'
-            && target.className
-            && target.className.match(APP_EXTLINK_REGEXP);
+            && (target.tagName && target.tagName.toLowerCase() === 'a')
+            && (target.className && target.className.match(APP_EXTLINK_REGEXP));
     }
 
     function createAppExternalLink(href) {
@@ -973,21 +998,22 @@ var OKSDK = (function () {
         return href;
     }
 
-    function getClass(o) {
+    function getInnerType(o) {
         return Object.prototype.toString.call(o);
     }
 
-    getClass._object = getClass({}); // [object Object]
-    getClass._function = getClass(stub_func); // [object Function]
-    getClass._array = getClass([]); // [object Array]
-    getClass._string = getClass(''); // [object String]
+    getInnerType._object = getInnerType({}); // [object Object]
+    getInnerType._function = getInnerType(stub_func); // [object Function]
+    getInnerType._array = getInnerType([]); // [object Array]
+    getInnerType._string = getInnerType(''); // [object String]
+    getInnerType._number = getInnerType(''); // [object Number]
 
     function isFunc(obj) {
-        return getClass(obj) === getClass._function;
+        return getInnerType(obj) === getInnerType._function;
     }
 
     function isString(obj) {
-        return Object.prototype.toString.call(obj) === getClass._string;
+        return Object.prototype.toString.call(obj) === getInnerType._string;
     }
 
     function toString(obj) {
@@ -1049,10 +1075,17 @@ var OKSDK = (function () {
                 ];
             })
             .withConfigAdapter(function (state) {
-                var groupId = this.options.groupId;
-                if (!groupId) {
+                if (typeof this.options.groupId == 'undefined') {
                     this.options.groupId = state.groupId;
                 }
+            }),
+        userPermission: new WidgetConfigurator('OAuth2Permissions')
+            .withUiLayerName('showPermissions')
+            .withUiAdapter(function (data, options) {
+                return [
+                    data.uiLayerName,
+                    options.scope
+                ];
             }),
         post: new WidgetConfigurator('WidgetMediatopicPost')
             .withUiLayerName('postMediatopic')
@@ -1092,6 +1125,7 @@ var OKSDK = (function () {
             WidgetConfigurator: WidgetConfigurator,
             configs: {
                 groupPermission: widgetConfigs.groupPermission,
+                userPermission: widgetConfigs.userPermission,
                 post: widgetConfigs.post,
                 invite: widgetConfigs.invite
             },
@@ -1099,13 +1133,15 @@ var OKSDK = (function () {
                 post: new WidgetLayerBuilder(widgetConfigs.post),
                 invite: new WidgetLayerBuilder(widgetConfigs.invite),
                 suggest: new WidgetLayerBuilder('WidgetSuggest'),
-                askGroupAppPermissions: new WidgetLayerBuilder(widgetConfigs.groupPermission)
+                askGroupAppPermissions: new WidgetLayerBuilder(widgetConfigs.groupPermission),
+                askUserAppPermissions: new WidgetLayerBuilder(widgetConfigs.userPermission)
             },
             getBackButtonHtml: widgetBackButton,
             post: widgetMediatopicPost,
             invite: widgetInvite,
             suggest: widgetSuggest,
-            askGroupAppPermissions: widgetGroupAppPermissions
+            askGroupAppPermissions: widgetGroupAppPermissions,
+            askUserAppPermissions: widgetUserAppPermissions
         },
         Util: {
             md5: md5,
